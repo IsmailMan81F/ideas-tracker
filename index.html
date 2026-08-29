@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ideas ?? Write them down</title>
+<style>
+  :root{
+    --bg:#0C0C0C;
+    --box:#D9D9D9;
+    --box-done:#5c6b5f;
+    --btn:#434343;
+    --btn-hover:#565656;
+    --text:#FFFFFF;
+    --text-dim:rgba(255,255,255,0.5);
+    --danger:#8a3b3b;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;
+    min-height:100vh;
+  }
+  .page{
+    max-width:900px;
+    margin:0 auto;
+    padding:60px 32px 120px;
+  }
+  h1{
+    font-weight:400;
+    font-size:clamp(32px, 6vw, 56px);
+    line-height:1.1;
+    letter-spacing:-0.06em;
+    text-transform:uppercase;
+    margin:0 0 60px;
+  }
+  ul.idea-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  ul.idea-list ul.idea-list{
+    margin-top:14px;
+  }
+  li.idea{
+    margin-bottom:14px;
+  }
+  .idea-row{
+    display:flex;
+    align-items:center;
+    gap:20px;
+  }
+  .checkbox{
+    flex:none;
+    width:40px;
+    height:40px;
+    border-radius:10px;
+    background:var(--box);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .15s ease;
+  }
+  .checkbox.done{
+    background:var(--box-done);
+  }
+  .checkbox svg{
+    width:22px;
+    height:22px;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .checkbox.done svg{
+    opacity:1;
+  }
+  .idea-text{
+    flex:1 1 auto;
+    font-size:clamp(20px, 3.4vw, 32px);
+    line-height:1.15;
+    word-break:break-word;
+    cursor:default;
+  }
+  .idea-text.done{
+    text-decoration:line-through;
+    color:var(--text-dim);
+  }
+  .row-actions{
+    flex:none;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .icon-btn{
+    flex:none;
+    width:26px;
+    height:26px;
+    border-radius:8px;
+    background:var(--btn);
+    border:none;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    padding:0;
+    transition:background .15s ease;
+  }
+  .icon-btn:hover{
+    background:var(--btn-hover);
+  }
+  .icon-btn.delete-btn:hover{
+    background:var(--danger);
+  }
+  .icon-btn svg{
+    width:12px;
+    height:12px;
+  }
+
+  ul.idea-list.children{
+    margin-top:14px;
+    margin-left:20px;
+    padding-left:40px;
+    border-left:1px solid #262626;
+  }
+
+  .inline-add{
+    display:none;
+    margin-top:12px;
+    padding-left:60px;
+  }
+  .inline-add.open{
+    display:flex;
+    gap:10px;
+  }
+  .inline-add input{
+    flex:1;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid var(--btn);
+    color:var(--text);
+    font-family:inherit;
+    font-size:20px;
+    padding:6px 2px;
+    outline:none;
+  }
+  .inline-add input::placeholder{
+    color:var(--text-dim);
+  }
+  .inline-add input:focus{
+    border-bottom-color:#888;
+  }
+
+  .add-root-form{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px 24px;
+    gap:20px;
+    background:var(--btn);
+    border-radius:10px;
+    margin-top:40px;
+    max-width:420px;
+  }
+  .add-root-form input{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--text);
+    font-family:inherit;
+    font-size:clamp(20px, 3.4vw, 32px);
+    outline:none;
+  }
+  .add-root-form input::placeholder{
+    color:var(--text-dim);
+  }
+
+  .empty-hint{
+    color:var(--text-dim);
+    font-size:18px;
+    margin:20px 0 0;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>Ideas ?? write them down</h1>
+    <ul class="idea-list" id="root-list"></ul>
+    <p class="empty-hint" id="empty-hint">Aucune idée pour l'instant. Ajoute la première en bas.</p>
+
+    <form class="add-root-form" id="add-root-form">
+      <input type="text" id="add-root-input" placeholder="add new ideas" autocomplete="off">
+    </form>
+  </div>
+
+<script>
+(function(){
+  const STORAGE_KEY = "nested-ideas-v1";
+
+  function loadIdeas(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){
+      console.error("Could not load ideas", e);
+      return [];
+    }
+  }
+
+  function saveIdeas(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
+    }catch(e){
+      console.error("Could not save ideas", e);
+    }
+  }
+
+  let ideas = loadIdeas();
+
+  function makeId(){
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  }
+
+  function findNode(list, id){
+    for(const node of list){
+      if(node.id === id) return node;
+      const found = findNode(node.children, id);
+      if(found) return found;
+    }
+    return null;
+  }
+
+  function findParentArray(list, id, parentArr){
+    for(const node of list){
+      if(node.id === id) return parentArr;
+      const found = findParentArray(node.children, id, node.children);
+      if(found) return found;
+    }
+    return null;
+  }
+
+  function addIdea(parentArray, text){
+    const trimmed = text.trim();
+    if(!trimmed) return;
+    parentArray.push({
+      id: makeId(),
+      text: trimmed,
+      done: false,
+      children: []
+    });
+    saveIdeas();
+    render();
+  }
+
+  function toggleDone(id){
+    const node = findNode(ideas, id);
+    if(node){
+      node.done = !node.done;
+      saveIdeas();
+      render();
+    }
+  }
+
+  function deleteIdea(id){
+    const parentArr = findParentArray(ideas, id, ideas);
+    if(parentArr){
+      const idx = parentArr.findIndex(n => n.id === id);
+      if(idx !== -1){
+        parentArr.splice(idx, 1);
+        saveIdeas();
+        render();
+      }
+    }
+  }
+
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12.5L9.5 18L20 6" stroke="#0C0C0C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const PLUS_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/></svg>';
+  const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7H20M9 7V4H15V7M6 7L7 20H17L18 7" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function buildIdeaLi(node){
+    const li = document.createElement('li');
+    li.className = 'idea';
+    li.dataset.id = node.id;
+
+    const row = document.createElement('div');
+    row.className = 'idea-row';
+
+    const checkbox = document.createElement('div');
+    checkbox.className = 'checkbox' + (node.done ? ' done' : '');
+    checkbox.innerHTML = CHECK_SVG;
+    checkbox.title = 'Marquer comme terminé';
+    checkbox.addEventListener('click', () => toggleDone(node.id));
+
+    const textEl = document.createElement('span');
+    textEl.className = 'idea-text' + (node.done ? ' done' : '');
+    textEl.textContent = node.text;
+
+    const actions = document.createElement('div');
+    actions.className = 'row-actions';
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'icon-btn add-btn';
+    addBtn.innerHTML = PLUS_SVG;
+    addBtn.title = 'Ajouter une sous-idée';
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'icon-btn delete-btn';
+    delBtn.innerHTML = TRASH_SVG;
+    delBtn.title = 'Supprimer';
+    delBtn.addEventListener('click', () => deleteIdea(node.id));
+
+    actions.appendChild(addBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(checkbox);
+    row.appendChild(textEl);
+    row.appendChild(actions);
+    li.appendChild(row);
+
+    // Inline add field
+    const inlineAdd = document.createElement('div');
+    inlineAdd.className = 'inline-add';
+    const inlineInput = document.createElement('input');
+    inlineInput.type = 'text';
+    inlineInput.placeholder = 'Écris une sous-idée et appuie sur Entrée';
+    inlineInput.autocomplete = 'off';
+    inlineAdd.appendChild(inlineInput);
+    li.appendChild(inlineAdd);
+
+    addBtn.addEventListener('click', () => {
+      const isOpen = inlineAdd.classList.toggle('open');
+      if(isOpen){
+        inlineInput.value = '';
+        inlineInput.focus();
+      }
+    });
+
+    inlineInput.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        addIdea(node.children, inlineInput.value);
+        inlineAdd.classList.remove('open');
+      }else if(e.key === 'Escape'){
+        inlineAdd.classList.remove('open');
+      }
+    });
+
+    // Children
+    if(node.children.length > 0){
+      const childUl = document.createElement('ul');
+      childUl.className = 'idea-list children';
+      node.children.forEach(child => {
+        childUl.appendChild(buildIdeaLi(child));
+      });
+      li.appendChild(childUl);
+    }
+
+    return li;
+  }
+
+  function render(){
+    const rootList = document.getElementById('root-list');
+    const emptyHint = document.getElementById('empty-hint');
+    rootList.innerHTML = '';
+    if(ideas.length === 0){
+      emptyHint.style.display = 'block';
+    }else{
+      emptyHint.style.display = 'none';
+      ideas.forEach(node => {
+        rootList.appendChild(buildIdeaLi(node));
+      });
+    }
+  }
+
+  const addRootForm = document.getElementById('add-root-form');
+  const addRootInput = document.getElementById('add-root-input');
+  addRootForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    addIdea(ideas, addRootInput.value);
+    addRootInput.value = '';
+    addRootInput.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
