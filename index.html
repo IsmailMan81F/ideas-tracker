@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -217,6 +217,45 @@
       margin: 16px 0 0;
     }
 
+    /* delete-all button */
+    .danger-zone {
+      margin-top: 32px;
+      display: flex;
+      justify-content: flex-start;
+    }
+    .delete-all-btn {
+      background: var(--danger);
+      border: none;
+      color: white;
+      font-size: 18px;
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .delete-all-btn:hover {
+      background: #a04545;
+    }
+    .delete-all-btn:active {
+      transform: scale(0.97);
+    }
+    .delete-all-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     /* ensure no overflow cut */
     .page, .idea-row, .idea-text {
       overflow: visible !important;
@@ -234,6 +273,7 @@
       .icon-btn { width: 22px; height: 22px; }
       .icon-btn svg { width: 12px; height: 12px; }
       .inline-add { padding-left: 28px; }
+      .delete-all-btn { font-size: 16px; padding: 8px 18px; }
     }
   </style>
 </head>
@@ -241,11 +281,19 @@
 <div class="page">
   <h1>Ideas ?? write them down</h1>
   <ul class="idea-list" id="root-list"></ul>
-  <p class="empty-hint" id="empty-hint">Aucune idée pour l'instant. Ajoute la première en bas.</p>
+  <p class="empty-hint" id="empty-hint">No ideas yet. Add the first one below.</p>
 
   <form class="add-root-form" id="add-root-form">
-    <input type="text" id="add-root-input" placeholder="add new ideas" autocomplete="off">
+    <input type="text" id="add-root-input" placeholder="add new idea" autocomplete="off">
   </form>
+
+  <!-- delete all button -->
+  <div class="danger-zone">
+    <button class="delete-all-btn" id="delete-all-btn">
+      <svg viewBox="0 0 24 24"><path d="M4 7H20M9 7V4H15V7M6 7L7 20H17L18 7"/></svg>
+      Delete all
+    </button>
+  </div>
 </div>
 
 <script>
@@ -330,6 +378,16 @@
       }
     }
 
+    // delete everything
+    function deleteAll() {
+      if (ideas.length === 0) return;
+      if (confirm('Delete all ideas and sub-ideas?')) {
+        ideas = [];
+        saveIdeas();
+        render();
+      }
+    }
+
     const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12.5L9.5 18L20 6" stroke="#0C0C0C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const PLUS_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/></svg>';
     const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7H20M9 7V4H15V7M6 7L7 20H17L18 7" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -345,7 +403,7 @@
       const checkbox = document.createElement('div');
       checkbox.className = 'checkbox' + (node.done ? ' done' : '');
       checkbox.innerHTML = CHECK_SVG;
-      checkbox.title = 'Marquer comme terminé';
+      checkbox.title = 'Mark as done';
       checkbox.addEventListener('click', () => toggleDone(node.id));
 
       const textEl = document.createElement('span');
@@ -359,13 +417,13 @@
       addBtn.type = 'button';
       addBtn.className = 'icon-btn add-btn';
       addBtn.innerHTML = PLUS_SVG;
-      addBtn.title = 'Ajouter une sous-idée';
+      addBtn.title = 'Add sub-idea';
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'icon-btn delete-btn';
       delBtn.innerHTML = TRASH_SVG;
-      delBtn.title = 'Supprimer';
+      delBtn.title = 'Delete';
       delBtn.addEventListener('click', () => deleteIdea(node.id));
 
       actions.appendChild(addBtn);
@@ -376,12 +434,12 @@
       row.appendChild(actions);
       li.appendChild(row);
 
-      // Inline add field
+      // Inline add field (sub-idea)
       const inlineAdd = document.createElement('div');
       inlineAdd.className = 'inline-add';
       const inlineInput = document.createElement('input');
       inlineInput.type = 'text';
-      inlineInput.placeholder = 'Écris une sous-idée et appuie sur Entrée';
+      inlineInput.placeholder = 'Write sub-idea and press Enter';
       inlineInput.autocomplete = 'off';
       inlineAdd.appendChild(inlineInput);
       li.appendChild(inlineAdd);
@@ -431,6 +489,7 @@
       }
     }
 
+    // root add form
     const addRootForm = document.getElementById('add-root-form');
     const addRootInput = document.getElementById('add-root-input');
     addRootForm.addEventListener('submit', (e) => {
@@ -439,6 +498,9 @@
       addRootInput.value = '';
       addRootInput.focus();
     });
+
+    // delete all button
+    document.getElementById('delete-all-btn').addEventListener('click', deleteAll);
 
     render();
   })();
